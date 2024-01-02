@@ -9,6 +9,7 @@ Created on jan 2
 import numpy as np
 import pandas as pd
 import streamlit as st
+from sklearn.metrics.pairwise import cosine_similarity
 import sklearn.metrics.pairwise
 
 st.set_page_config(layout='wide',page_title='Book Recommendation System')
