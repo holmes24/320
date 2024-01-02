@@ -1,31 +1,31 @@
 # app.py
 import streamlit as st
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Load your data here, or adjust the data loading steps according to your setup
+# Load your data here
 books = pd.read_csv("Books.csv")
 ratings = pd.read_csv("Ratings.csv") 
 users = pd.read_csv("Users.csv")
 
-merged_data1 = pd.merge(books, ratings_new, on='ISBN')
+# Merge data and filter
+merged_data1 = pd.merge(books, ratings, on='ISBN')
 merged_data = pd.merge(merged_data1, users, on='userId')
-merged_data =  merged_data.sort_values('ISBN', ascending=True)
-merged_data.head()
-# For example:
-x=merged_data.groupby("userId").count()["bookRating"]>200
-educated_users=x[x].index   # Boolean Indexing
-filtered_rating=merged_data[merged_data["userId"].isin(educated_users)]
-y = filtered_rating.groupby("bookTitle").count()["bookRating"]>=50
+merged_data = merged_data.sort_values('ISBN', ascending=True)
+
+# Data processing for recommendations
+x = merged_data.groupby("userId").count()["bookRating"] > 200
+educated_users = x[x].index
+filtered_rating = merged_data[merged_data["userId"].isin(educated_users)]
+y = filtered_rating.groupby("bookTitle").count()["bookRating"] >= 50
 famous_books = y[y].index
 final_ratings = filtered_rating[filtered_rating["bookTitle"].isin(famous_books)]
-pt=final_ratings.pivot_table(index="bookTitle",columns="userId",values="bookRating")
-pt.fillna(0,inplace=True)
-similarity_scores= cosine_similarity(pt)
-# final_ratings = pd.read_csv("your_data.csv")
 
-# Assuming you have a DataFrame named final_ratings
-#pt = final_ratings.pivot_table(index="bookTitle", columns="userId", values="bookRating")
+pt = final_ratings.pivot_table(index="bookTitle", columns="userId", values="bookRating")
+pt.fillna(0, inplace=True)
+similarity_scores = cosine_similarity(pt)
 
+# Streamlit app code
 def get_user_ratings(user_id, books_to_check):
     user_id = int(user_id)
 
