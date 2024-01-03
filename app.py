@@ -1,65 +1,65 @@
-# app.py
-import streamlit as st
 import pandas as pd
+import numpy as np
+import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load your data here
-books = pd.read_csv("Books.csv")
-ratings = pd.read_csv("Ratings.csv") 
-users = pd.read_csv("Users.csv")
+books = pd.read_csv(r"C:\Users\kurak\OneDrive\Desktop\groups,dataset,objective\Books.csv")
 
-# Merge data and filter
-merged_data1 = pd.merge(books, ratings, on='ISBN')
-merged_data = pd.merge(merged_data1, users, on='userId')
-merged_data = merged_data.sort_values('ISBN', ascending=True)
+# Assuming 'final_ratings.csv' is loaded somewhere in the code
 
-# Data processing for recommendations
-x = merged_data.groupby("userId").count()["bookRating"] > 200
-educated_users = x[x].index
-filtered_rating = merged_data[merged_data["userId"].isin(educated_users)]
-y = filtered_rating.groupby("bookTitle").count()["bookRating"] >= 50
-famous_books = y[y].index
-final_ratings = filtered_rating[filtered_rating["bookTitle"].isin(famous_books)]
+final_ratings = pd.read_csv(r"C:\Users\kurak\OneDrive\Desktop\groups,dataset,objective\final_ratings.csv")
 
 pt = final_ratings.pivot_table(index="bookTitle", columns="userId", values="bookRating")
 pt.fillna(0, inplace=True)
-similarity_scores = cosine_similarity(pt)
 
-# Streamlit app code
-def get_user_ratings(user_id, books_to_check):
-    user_id = int(user_id)
+st.title('User-Based Book Recommendation System')
 
-    if user_id in pt.columns:
-        book_ratings = {}
-        for book_title in books_to_check:
-            if book_title in pt.index:
-                rating = pt.loc[book_title, user_id]
-                if pd.notna(rating):
-                    book_ratings[book_title] = rating
-                else:
-                    book_ratings[book_title] = f"User {user_id} has not rated '{book_title}'."
-            else:
-                book_ratings[book_title] = f"Book '{book_title}' not found in the dataset."
+# Function to recommend similar books
+def recommend(book_name):
+    index = np.where(pt.index == book_name)[0][0]
 
-        return book_ratings
-    else:
-        return f"Invalid User ID: {user_id}. Please enter a valid User ID."
+    similarity_scores = cosine_similarity(pt)
+    similar_items = sorted(list(enumerate(similarity_scores[index])), key=lambda x: x[1], reverse=True)[1:6]
 
-# Streamlit app code
+    recommended_books = [pt.index[i[0]] for i in similar_items]
+    return recommended_books
+
+# Streamlit app
 def main():
-    st.title("Book Ratings App")
+    st.title("Recommand Top 5 Books")
 
-    # Get user input
-    user_id_to_check = st.text_input("Enter User ID:")
+    user_input = st.text_input("Enter User ID or Book Title:")
 
-    # Specify the books to check
-    books_to_check = ["The Golden Compass (His Dark Materials, Book 1)", "The Eyre Affair: A Novel", "Seabiscuit: An American Legend", "The Amber Spyglass (His Dark Materials, Book 3)", "Coraline"]
+    if st.button("Enter"):
+        try:
+            user_input = int(user_input)
+            if user_input in pt.columns:
+                user_ratings = pt[user_input].dropna()
+                top_rated_books = user_ratings.sort_values(ascending=False).head(5)
 
-    # Display results
-    result = get_user_ratings(user_id_to_check, books_to_check)
-    st.subheader(f"Ratings for User {user_id_to_check} for the specified books:")
-    for book_title, rating in result.items():
-        st.write(f"{book_title}: {rating}")
+                st.write(f"Top 5 rated books for User {user_input}:")
+                st.write(top_rated_books)
+            else:
+                st.write("Invalid User ID. Please enter a valid User ID.")
+        except ValueError:
+            if user_input in pt.index:
+                recommended_books = recommend(user_input)
+                st.write(f"Books similar to '{user_input}':")
+                st.write(recommended_books)
+            else:
+                st.write(f"Book '{user_input}' not found in the dataset.")
+
+    st.title("Recommand Books")
+
+    book_input = st.text_input("Enter Book Name:")
+
+    if st.button("Recommend"):
+        if book_input in pt.index:
+            recommended_books = recommend(book_input)
+            st.write(f"Books similar to '{book_input}':")
+            st.write(recommended_books)
+        else:
+            st.write(f"Book '{book_input}' not found in the dataset.")
 
 if __name__ == "__main__":
     main()
